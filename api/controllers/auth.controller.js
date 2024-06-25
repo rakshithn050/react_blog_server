@@ -74,3 +74,55 @@ export const signin = async (req, res, next) => {
     next(error);
   }
 };
+
+export const googleAuth = async (req, res, next) => {
+  const { name, email, googlePhotoURL } = req.body;
+
+  try {
+    const validUser = await User.findOne({ email });
+    if (validUser) {
+      const token = jwt.sign({ id: User._id }, process.env.SECRET_KEY);
+
+      const { password: pass, ...restUserInfo } = validUser._doc;
+
+      // Set token as a cookie (assuming you are using cookies)
+      res.cookie("access_token", token, { httpOnly: true });
+
+      // Respond with success message and token (you may customize the response as needed)
+      res
+        .status(200)
+        .json({ message: "Signin successful", restUserInfo, token });
+    } else {
+      const generatedPassword =
+        Math.random().toString(36).slice(-8) +
+        Math.random().toString(36).slice(-8);
+
+      const hashedPassword = bcryptjs.hashSync(generatedPassword);
+
+      const newUser = new User({
+        username:
+          name.toLowerCase().split(" ").join("") +
+          Math.random().toString(9).slice(-4),
+        email,
+        password: hashedPassword,
+        profilePicture: googlePhotoURL,
+      });
+
+      await newUser.save();
+
+      const token = jwt.sign({ id: User._id }, process.env.SECRET_KEY);
+
+      const { password: pass, ...restUserInfo } = validUser._doc;
+
+      // Set token as a cookie (assuming you are using cookies)
+      res.cookie("access_token", token, { httpOnly: true });
+
+      // Respond with success message and token (you may customize the response as needed)
+      res
+        .status(200)
+        .json({ message: "Signin successful", restUserInfo, token });
+    }
+  } catch (error) {
+    next(error);
+  }
+};
