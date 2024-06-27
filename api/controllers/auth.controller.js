@@ -79,27 +79,29 @@ export const googleAuth = async (req, res, next) => {
   const { name, email, googlePhotoURL } = req.body;
 
   try {
-    const validUser = await User.findOne({ email });
-    if (validUser) {
-      const token = jwt.sign({ id: User._id }, process.env.SECRET_KEY);
+    // Check if the user already exists in the database
+    let user = await User.findOne({ email });
 
-      const { password: pass, ...restUserInfo } = validUser._doc;
+    if (user) {
+      // User already exists, generate token for existing user
+      const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY);
+
+      const { password: pass, ...restUserInfo } = user._doc;
 
       // Set token as a cookie (assuming you are using cookies)
       res.cookie("access_token", token, { httpOnly: true });
 
-      // Respond with success message and token (you may customize the response as needed)
+      // Respond with success message and token
       res
         .status(200)
         .json({ message: "Signin successful", restUserInfo, token });
     } else {
-      const generatedPassword =
-        Math.random().toString(36).slice(-8) +
-        Math.random().toString(36).slice(-8);
+      // User does not exist, create a new user
+      const generatedPassword = Math.random().toString(36).slice(-8); // Generate random password
+      const hashedPassword = await bcryptjs.hash(generatedPassword, 10); // Hash password
 
-      const hashedPassword = bcryptjs.hashSync(generatedPassword);
-
-      const newUser = new User({
+      // Create new user
+      user = new User({
         username:
           name.toLowerCase().split(" ").join("") +
           Math.random().toString(9).slice(-4),
@@ -108,16 +110,17 @@ export const googleAuth = async (req, res, next) => {
         profilePicture: googlePhotoURL,
       });
 
-      await newUser.save();
+      await user.save();
 
-      const token = jwt.sign({ id: User._id }, process.env.SECRET_KEY);
+      // Generate token for new user
+      const token = jwt.sign({ id: user._id }, process.env.SECRET_KEY);
 
-      const { password: pass, ...restUserInfo } = validUser._doc;
+      const { password: pass, ...restUserInfo } = user._doc;
 
       // Set token as a cookie (assuming you are using cookies)
       res.cookie("access_token", token, { httpOnly: true });
 
-      // Respond with success message and token (you may customize the response as needed)
+      // Respond with success message and token
       res
         .status(200)
         .json({ message: "Signin successful", restUserInfo, token });

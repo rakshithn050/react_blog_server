@@ -3,8 +3,7 @@ import { errorHandler } from "../utils/error.js";
 import bcryptjs from "bcryptjs";
 
 export const updateUserProfile = async (req, res, next) => {
-  console.log("Function updateUser");
-
+  
   // Authorization check
   if (req.user.id !== req.params.userId) {
     return next(
