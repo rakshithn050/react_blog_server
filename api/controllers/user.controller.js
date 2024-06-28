@@ -3,7 +3,6 @@ import { errorHandler } from "../utils/error.js";
 import bcryptjs from "bcryptjs";
 
 export const updateUserProfile = async (req, res, next) => {
-  
   // Authorization check
   if (req.user.id !== req.params.userId) {
     return next(
@@ -59,6 +58,23 @@ export const updateUserProfile = async (req, res, next) => {
 
     const { password, ...restUserInfo } = updatedUser._doc;
     res.status(200).json(restUserInfo);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deleteUserProfile = async (req, res, next) => {
+  if (req.user.id !== req.params.userId) {
+    return next(
+      errorHandler(403, "You are not allowed to delete this profile")
+    );
+  }
+
+  try {
+    // Update user
+    const deletedUser = await User.findByIdAndDelete(req.params.userId);
+
+    res.status(200).send("Profile deleted successfully");
   } catch (error) {
     next(error);
   }
