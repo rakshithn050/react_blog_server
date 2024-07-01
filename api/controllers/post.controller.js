@@ -30,10 +30,10 @@ export const createNewPost = async (req, res, next) => {
 
 export const getPosts = async (req, res, next) => {
   try {
-    const startIndex = parseInt(req.query.startIndex) || 0;
-    const limit = parseInt(req.query.limit) || 0;
-    const sortBy = req.query.order === "asc" ? 1 : -1;
-    const posts = await Post.find({
+    const page = parseInt(req.query.page) || 1;
+    const perPage = parseInt(req.query.perPage) || 10;
+    const sortBy = req.query.order ? (req.query.order === "asc" ? 1 : -1) : 1;
+    const filters = {
       ...(req.query.userID && { userID: req.query.userID }),
       ...(req.query.category && { category: req.query.category }),
       ...(req.query.slug && { slug: req.query.slug }),
@@ -42,30 +42,32 @@ export const getPosts = async (req, res, next) => {
         $or: [
           { title: { $regex: req.query.searchTerm, $options: "i" } },
           { content: { $regex: req.query.searchTerm, $options: "i" } },
-          { title: { $regex: req.query.searchTerm, $options: "i" } },
         ],
       }),
-    })
-      .sort({ updatedAt: sortBy })
-      .skip(startIndex)
-      .limit(limit);
+    };
 
-    const totalPosts = await Post.countDocuments();
+    const totalPosts = await Post.countDocuments(filters);
+    const totalPages = Math.ceil(totalPosts / perPage);
+
+    const posts = await Post.find(filters)
+      .sort({ updatedAt: sortBy })
+      .skip((page - 1) * perPage)
+      .limit(perPage);
 
     const now = new Date();
-
     const oneMonthAgo = new Date(
       now.getFullYear(),
       now.getMonth() - 1,
       now.getDate()
     );
-
     const lastMonthPosts = await Post.countDocuments({
       createdAt: { $gte: oneMonthAgo },
     });
 
     res.status(200).json({
       posts,
+      currentPage: page,
+      totalPages,
       totalPosts,
       lastMonthPosts,
     });
