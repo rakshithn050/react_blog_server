@@ -39,7 +39,7 @@ export const getPosts = async (req, res, next) => {
       ...(req.query.searchTerm && {
         $or: [
           { title: { $regex: req.query.searchTerm, $options: "i" } },
-          { content: { $regex: req.query.searchTerm, $options: "i" } },
+          { description: { $regex: req.query.searchTerm, $options: "i" } },
         ],
       }),
     };
@@ -87,6 +87,36 @@ export const deletePost = async (req, res, next) => {
     }
 
     res.status(200).json("The post has been deleted successfully");
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const updatePost = async (req, res, next) => {
+  try {
+    if (!req.user.isAdmin && req.user.id !== req.params.userId) {
+      return next(errorHandler(403, "You are not allowed to update this post"));
+    }
+
+    const updatedPost = await Post.findByIdAndUpdate(
+      req.params.postID,
+      {
+        title: req.body.title,
+        category: req.body.category,
+        description: req.body.description,
+        image: req.body.image,
+      },
+      { new: true }
+    );
+
+    if (!updatedPost) {
+      return next(errorHandler(404, "Post not found"));
+    }
+
+    res.status(200).json({
+      message: "The post has been updated successfully",
+      post: updatedPost,
+    });
   } catch (error) {
     next(error);
   }
