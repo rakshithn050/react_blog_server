@@ -80,6 +80,49 @@ export const deleteUserProfile = async (req, res, next) => {
   }
 };
 
+export const getUsers = async (req, res, next) => {
+  try {
+    if (!req.user.isAdmin) {
+      return next(
+        errorHandler(403, "You are not allowed to view the list of users")
+      );
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const perPage = parseInt(req.query.perPage) || 10;
+    const sortBy = req.query.order ? (req.query.order === "asc" ? 1 : -1) : 1;
+
+    const totalUsers = await User.countDocuments();
+    const totalPages = Math.ceil(totalUsers / perPage);
+
+    const users = await User.find()
+      .sort({ updatedAt: sortBy })
+      .skip((page - 1) * perPage)
+      .limit(perPage)
+      .select("-password");
+
+    const now = new Date();
+    const oneMonthAgo = new Date(
+      now.getFullYear(),
+      now.getMonth() - 1,
+      now.getDate()
+    );
+    const lastMonthUsers = await User.countDocuments({
+      createdAt: { $gte: oneMonthAgo },
+    });
+
+    res.status(200).json({
+      users,
+      currentPage: page,
+      totalPages,
+      totalUsers,
+      lastMonthUsers,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const signout = (req, res, next) => {
   try {
     res
