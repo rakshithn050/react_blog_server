@@ -16,8 +16,6 @@ export const createNewPost = async (req, res, next) => {
       .toLowerCase()
       .replace(/[^a-zA-Z0-9-]/g, "-");
 
-    console.log(slug);
-
     const newPost = new Post({ ...req.body, slug, userID: req.user.id });
 
     const savedPost = await newPost.save();
@@ -71,6 +69,24 @@ export const getPosts = async (req, res, next) => {
       totalPosts,
       lastMonthPosts,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const deletePost = async (req, res, next) => {
+  try {
+    if (!req.user.isAdmin && req.user.id !== req.params.userId) {
+      return next(errorHandler(403, "You are not allowed to delete this post"));
+    }
+
+    const post = await Post.findByIdAndDelete(req.params.postID);
+
+    if (!post) {
+      return next(errorHandler(404, "Post not found"));
+    }
+
+    res.status(200).json("The post has been deleted successfully");
   } catch (error) {
     next(error);
   }
