@@ -64,15 +64,26 @@ export const updateUserProfile = async (req, res, next) => {
 };
 
 export const deleteUserProfile = async (req, res, next) => {
-  if (req.user.id !== req.params.userId) {
+  if (!req.user.isAdmin && req.user.id !== req.params.userId) {
     return next(
       errorHandler(403, "You are not allowed to delete this profile")
     );
   }
 
   try {
-    // Update user
-    const deletedUser = await User.findByIdAndDelete(req.params.userId);
+    const userToDelete = await User.findById(req.params.userId);
+
+    if (!userToDelete) {
+      return next(errorHandler(404, "User not found"));
+    }
+
+    // Check if the user to be deleted is an admin
+    if (userToDelete.isAdmin) {
+      return next(errorHandler(403, "Admin users cannot be deleted"));
+    }
+
+    // Delete user
+    await User.findByIdAndDelete(req.params.userId);
 
     res.status(200).send("Profile deleted successfully");
   } catch (error) {
