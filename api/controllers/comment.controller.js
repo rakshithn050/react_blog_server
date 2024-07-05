@@ -55,3 +55,33 @@ export const likeComment = async (req, res, next) => {
     next(error);
   }
 };
+
+export const editComment = async (req, res, next) => {
+  try {
+    const comment = await Comment.findById(req.params.postID);
+    if (!comment) {
+      next(errorHandler(404, "Could not find comment"));
+    }
+    if (comment.userID !== req.user.id || !req.user.isAdmin) {
+      return next(
+        errorHandler(403, "You are not allowed to edit this comment")
+      );
+    }
+
+    const editedComment = await Comment.findByIdAndUpdate(
+      req.params.postID,
+      {
+        $set: { comment: req.body.description },
+      },
+      { new: true }
+    );
+
+    if (!editedComment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    res.status(200).json(editedComment);
+  } catch (error) {
+    next(error);
+  }
+};
