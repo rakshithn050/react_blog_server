@@ -147,12 +147,47 @@ export const getAllComments = async (req, res, next) => {
       createdAt: { $gte: oneMonthAgo },
     });
 
+    // Calculate the sum of likes for all comments using numberOfLikes field
+    const likesAggregation = await Comment.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalLikes: { $sum: "$numberOfLikes" },
+        },
+      },
+    ]);
+
+    const totalLikes =
+      likesAggregation.length > 0 ? likesAggregation[0].totalLikes : 0;
+
+    // Calculate the sum of likes for comments created in the last month using numberOfLikes field
+    const lastMonthLikesAggregation = await Comment.aggregate([
+      {
+        $match: {
+          createdAt: { $gte: oneMonthAgo },
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalLikes: { $sum: "$numberOfLikes" },
+        },
+      },
+    ]);
+
+    const lastMonthLikes =
+      lastMonthLikesAggregation.length > 0
+        ? lastMonthLikesAggregation[0].totalLikes
+        : 0;
+
     res.status(200).json({
       comments,
       currentPage: page,
       totalPages,
       totalComments,
       lastMonthComments,
+      totalLikes,
+      lastMonthLikes,
     });
   } catch (error) {
     next(error);
