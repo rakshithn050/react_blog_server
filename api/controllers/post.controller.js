@@ -33,15 +33,19 @@ export const getPosts = async (req, res, next) => {
     const sortBy = req.query.order ? (req.query.order === "asc" ? 1 : -1) : 1;
     const filters = {
       ...(req.query.userID && { userID: req.query.userID }),
-      ...(req.query.category && { category: req.query.category }),
+      ...(req.query.category &&
+        req.query.category !== "uncategorized" && {
+          category: req.query.category,
+        }),
       ...(req.query.slug && { slug: req.query.slug }),
       ...(req.query.postId && { _id: req.query.postId }),
-      ...(req.query.searchTerm && {
-        $or: [
-          { title: { $regex: req.query.searchTerm, $options: "i" } },
-          { description: { $regex: req.query.searchTerm, $options: "i" } },
-        ],
-      }),
+      ...(req.query.searchTerm &&
+        req.query.searchTerm !== "" && {
+          $or: [
+            { title: { $regex: req.query.searchTerm, $options: "i" } },
+            { description: { $regex: req.query.searchTerm, $options: "i" } },
+          ],
+        }),
     };
 
     const totalPosts = await Post.countDocuments(filters);
